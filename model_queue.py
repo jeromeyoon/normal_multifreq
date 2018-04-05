@@ -29,8 +29,8 @@ class DCGAN(object):
 	self.use_queue = True
 	self.mean_nir = -0.3313 #-1~1
 	self.dropout =0.7
-	self.loss ='L2'
-	self.type = 'single'
+	self.loss ='L1'
+	self.input_type = 'multi' #multi frequency
         self.list_val = [11,16,21,22,33,36,38,53,59,92]
 	self.pair = False
 	self.build_model()
@@ -45,7 +45,7 @@ class DCGAN(object):
                                     name='low_normal_images')
 	else:
 		print ' using queue loading'
-		if self.type == 'single':
+		if self.input_type == 'single':
 		    self.image_single = tf.placeholder(tf.float32,shape=self.ir_image_shape)
 	 	    self.normal_image_single = tf.placeholder(tf.float32,shape=self.normal_image_shape)
                     q = tf.RandomShuffleQueue(1000,100,[tf.float32,tf.float32],[[self.ir_image_shape[0],self.ir_image_shape[1],1],[normal_image_shape[0],self.normal_image_shape[1],3]])
@@ -65,26 +65,25 @@ class DCGAN(object):
 
 	self.keep_prob = tf.placeholder(tf.float32)
 	net  = networks(64,self.df_dim)
-	if self.type == 'single':
-	
+	if self.input_type is 'single':
        	    self.G = net.generator(self.images) 
 	    self.G = self.G[-1]
 	else:
-       	    self.nondetail_G,self.detail_G = net.generator(self.nondetail_images,self.detail_images) 
+       	    self.nondetail_G,self.detail_G = net.multi_freq_generator(self.nondetail_images,self.detail_images) 
 	    self.G = self.nondetail_G[-1] + self.detail_G[-1]
 
 	######## evaluation #######
 
-	if self.type == 'single':
-i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sampler') 
+	if self.input_type == 'single':
+	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sampler') 
 
 	else:
 	    self.sample_low= tf.placeholder(tf.float32,shape=[1,600,800,1],name='sampler_low')
 	    self.sample_high= tf.placeholder(tf.float32,shape=[1,600,800,1],name='sampler_high')
-	    self.sample_low_G,self.sample_high_G =net.sampler(self.sample_low,self.sample_high)
+	    self.sample_low_G,self.sample_high_G =net.multi_freq_sampler(self.sample_low,self.sample_high)
 	    self.sample_G = self.sample_low_G[-1] + self.sample_high_G[-1]	
 	################ Discriminator Loss ######################
-        if self.type=='single':
+        if self.input_type=='single':
             self.D = net.discriminator(tf.concat(3,[self.images,self.normal]),self.keep_prob)
 	    self.D_  = net.discriminator(tf.concat(3,[self.images,self.G[-1]]),self.keep_prob,reuse=True)
 
@@ -103,9 +102,9 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
 	        self.detail_D_  = net.discriminator_high(self.detail_G[-1],self.keep_prob,reuse=True)
 
 	#### entire resolution ####
-	if self.type=='single':
-            self.d_loss_real = binary_cross_entropy_with_logits(tf.random_uniform(self.nondetail_D[-1].get_shape(),minval=0.7,maxval=1.2,dtype=tf.float32,seed=0), self.D[-1])
-            self.loss_fake = binary_cross_entropy_with_logits(tf.random_uniform(self.nondetail_D[-1].get_shape(),minval=0.0,maxval=0.3,dtype=tf.float32,seed=0), self.D_[-1])
+	if self.input_type=='single':
+            self.d_loss_real = binary_cross_entropy_with_logits(tf.ones.like(self.D[-1]), self.D[-1])
+            self.loss_fake = binary_cross_entropy_with_logits(tf.zeros.like(self.D_[-1]), self.D_[-1])
             self.d_loss = self.d_loss_real + self.d_loss_fake 
 
 	else:
@@ -124,7 +123,7 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
 	self.ang_loss = ang_loss.ang_error(self.G,self.normal_images)
 	
 	if self.loss == 'L1':
-            if self.type == 'single':
+            if self.input_type == 'single':
                 self.L_loss = tf.reduce_mean(tf.abs(tf.sub(self.G,self.normal_images)))
 
 	    else:
@@ -132,16 +131,17 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
                 self.detail_L_loss = tf.reduce_mean(tf.abs(tf.sub(self.detail_G[-1],self.detail_normal)))
                 self.L_loss = tf.reduce_mean(tf.abs(tf.sub(self.G,self.normal_images)))
 	else:
-            if self.type == 'single':
+            if self.input_type == 'single':
                 self.L_loss = tf.reduce_mean(tf.square(self.G-self.normal_images))
             else:
                 self.nondetail_L_loss = tf.reduce_mean(tf.square(self.nondetail_G[-1]-self.nondetail_normal))
                 self.detail_L_loss =tf.reduce_mean(tf.square(self.detail_G[-1]-self.detail_normal))
                 self.L_loss = tf.reduce_mean(tf.square(self.G-self.normal_images))
 
-	if self.type == 'single':
+	if self.input_type == 'single':
             self.g_loss = binary_cross_entropy_with_logits(tf.ones_like(self.D_[-1]), self.D_[-1])
-            self.gen_loss = self.g_loss + (self.L_loss+self.ang_loss)*100t_vars = tf.trainable_variables()
+            self.gen_loss = self.g_loss + (self.L_loss+self.ang_loss)*100
+	    t_vars = tf.trainable_variables()
             
 	    t_vars = tf.trainable_variables()
 	    self.g_vars =[var for var in t_vars if 'g' in var.name]
@@ -160,10 +160,10 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
 	    self.detail_g_vars =[var for var in t_vars if 'high_g' in var.name]
 
 	self.saver = tf.train.Saver(max_to_keep=20)
-        def train(self, config):
+    def train(self, config):
         #####Train DCGAN####
 
-	if self.type == 'single':
+	if self.input_type == 'single':
             global_step1 = tf.Variable(0,name='global_step1',trainable=False)
             global_step2 = tf.Variable(0,name='global_step2',trainable=False)
             d_optim = tf.train.AdamOptimizer(config.learning_rate,beta1=config.beta1) \
@@ -200,8 +200,6 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
         # loda training and validation dataset path
 	data = json.load(open("/research2/ECCV_journal/trainingdata_json/0326/traininput.json"))
         data_label = json.load(open("/research2/ECCV_journal/trainingdata_json/0326/traingt.json"))
-	#data = json.load(open("/research2/ECCV_journal/with_light/json/traininput.json"))
-        #data_label = json.load(open("/research2/ECCV_journal/with_light/json/traingt.json"))
 	train_input =[data[idx] for idx in xrange(0,len(data))]
 	train_gt =[data_label[idx] for idx in xrange(0,len(data))]
 
@@ -212,7 +210,7 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
 	    # creat thread
 	    coord = tf.train.Coordinator()
             num_thread =1
-	    if self.type =='single':
+	    if self.input_type =='single':
                 for i in range(num_thread):
  	            t = threading.Thread(target=self.load_and_enqueue_single,args=(coord,train_input,train_gt,shuf,i,num_thread))
 	 	    t.start()
@@ -227,7 +225,7 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
 	        #shuffle = np.random.permutation(range(len(data)))
 	        batch_idxs = min(len(data), config.train_size)/config.batch_size
 
-		if self.type = 'single':
+		if self.input_type is 'single':
                     for idx in xrange(0,batch_idxs):
         	        start_time = time.time()
 		        _,d_err =self.sess.run([d_optim,self.d_loss],feed_dict={self.keep_prob:self.dropout})
@@ -302,7 +300,7 @@ i	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sample
             self.sess.run(self.enqueue_op,feed_dict={self.image_single:ipt,self.normal_image_single:label})
 	    count +=1
     
-    def load_and_enqueue(self,coord,file_list,label_list,shuf,idx=0,num_thread=1):
+    def load_and_enqueue_multi(self,coord,file_list,label_list,shuf,idx=0,num_thread=1):
 	count =0;
 	length = len(file_list)
 	rot=[0,90,180,270]
