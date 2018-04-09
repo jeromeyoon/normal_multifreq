@@ -71,7 +71,6 @@ class networks(object):
         low_layers=[]
 	high_layers=[]
         layers_spec=[4,2]
-	
 	tf.get_variable_scope().reuse_variables()	
 	with tf.variable_scope('low_g%d' %(len(low_layers)+1)):
 	    net =lrelu(conv2d(low_nir,self.gf_dim*2))
@@ -129,10 +128,15 @@ class networks(object):
 
     def discriminator_low(self, image,keep_prob, reuse=False): 
 	layers=[]
-	layers_spec=[2,4]
+	layers_spec=[2,4,8]
+
+	#with tf.variable_scope('low_dis') as scope:
+	#    if reuse:
+	#        scope.reuse_variables()
 	with tf.variable_scope(tf.get_variable_scope(),reuse=reuse):
-            net = lrelu(conv2d(image,self.df_dim,d_h=2,d_w=2)) 
-	    layers.append(net)
+            with tf.variable_scope('low_dis%d' %(len(layers)+1)):
+                net = lrelu(conv2d(image,self.df_dim,d_h=2,d_w=2)) 
+	        layers.append(net)
             for i in layers_spec:
                 with tf.variable_scope('low_dis%d' %(len(layers)+1)):
                     net = lrelu(conv2d(layers[-1],self.df_dim*i,d_h=2,d_w=2)) 
@@ -160,7 +164,7 @@ class networks(object):
 
     def discriminator(self, image,keep_prob, reuse=False): 
 	layers=[]
-	layers_spec=[2,4]
+	layers_spec=[2,4,8]
 	with tf.variable_scope(tf.get_variable_scope(),reuse=reuse):
             net = lrelu(conv2d(image,self.df_dim,d_h=2,d_w=2)) 
 	    layers.append(net)

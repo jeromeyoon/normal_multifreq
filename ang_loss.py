@@ -9,8 +9,8 @@ def ang_error(samples,gt_samples):
     #valid_pixel = b*h*w
     output = l2_normalize(samples)
     gt_output = l2_normalize(gt_samples)
-    tmp = tf.reduce_sum(tf.mul(output,gt_output),3)
-    output = tf.reduce_sum(tf.sub(tf.ones_like(tmp,dtype=tf.float32),tmp),[1,2])
+    tmp = tf.reduce_sum(tf.multiply(output,gt_output),3)
+    output = tf.reduce_sum(tf.subtract(tf.ones_like(tmp,dtype=tf.float32),tmp),[1,2])
     output = output/(h*w)
     return tf.reduce_sum(output)/batch
 

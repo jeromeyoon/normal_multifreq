@@ -73,7 +73,7 @@ class DCGAN(object):
 	    self.G = self.nondetail_G[-1] + self.detail_G[-1]
 
 	######## evaluation #######
-
+	'''
 	if self.input_type == 'single':
 	    self.sample_G = tf.placeholder(tf.float32,shape=[1,600,800,1],name='sampler') 
 
@@ -82,13 +82,26 @@ class DCGAN(object):
 	    self.sample_high= tf.placeholder(tf.float32,shape=[1,600,800,1],name='sampler_high')
 	    self.sample_low_G,self.sample_high_G =net.multi_freq_sampler(self.sample_low,self.sample_high)
 	    self.sample_G = self.sample_low_G[-1] + self.sample_high_G[-1]	
+	'''
 	################ Discriminator Loss ######################
+        self.detail_D = net.discriminator_high(self.detail_normal,self.keep_prob)
+	self.detail_D_  = net.discriminator_high(self.detail_G[-1],self.keep_prob,reuse=True)
+        self.nondetail_D = net.discriminator_low(self.nondetail_normal,self.keep_prob)
+	self.nondetail_D_  = net.discriminator_low(self.nondetail_G[-1],self.keep_prob,reuse=True)
+	'''
         if self.input_type=='single':
             self.D = net.discriminator(tf.concat(3,[self.images,self.normal]),self.keep_prob)
 	    self.D_  = net.discriminator(tf.concat(3,[self.images,self.G[-1]]),self.keep_prob,reuse=True)
 
 
         else:
+            pdb.set_trace()
+	    self.detail_D = net.discriminator_high(self.detail_normal,self.keep_prob)
+	    self.detail_D_  = net.discriminator_high(self.detail_G[-1],self.keep_prob,reuse=True)
+            self.nondetail_D = net.discriminator_low(self.nondetail_normal,self.keep_prob)
+	    self.nondetail_D_  = net.discriminator_low(self.nondetail_G[-1],self.keep_prob,reuse=True)
+	'''
+        '''
 	    if self.pair: 
                 self.nondetail_D = net.discriminator_low(tf.concat(3,[self.nondetail_images,self.nondetail_normal]),self.keep_prob)
 	        self.nondetail_D_  = net.discriminator_low(tf.concat(3,[self.nondetail_images,self.nondetail_G[-1]]),self.keep_prob,reuse=True)
@@ -100,7 +113,7 @@ class DCGAN(object):
 	        self.nondetail_D_  = net.discriminator_low(self.nondetail_G[-1],self.keep_prob,reuse=True)
 	        self.detail_D = net.discriminator_high(self.detail_normal,self.keep_prob)
 	        self.detail_D_  = net.discriminator_high(self.detail_G[-1],self.keep_prob,reuse=True)
-
+        '''
 	#### entire resolution ####
 	if self.input_type=='single':
             self.d_loss_real = binary_cross_entropy_with_logits(tf.ones.like(self.D[-1]), self.D[-1])
@@ -124,12 +137,12 @@ class DCGAN(object):
 	
 	if self.loss == 'L1':
             if self.input_type == 'single':
-                self.L_loss = tf.reduce_mean(tf.abs(tf.sub(self.G,self.normal_images)))
+                self.L_loss = tf.reduce_mean(tf.abs(tf.subtract(self.G,self.normal_images)))
 
 	    else:
-                self.nondetail_L_loss = tf.reduce_mean(tf.abs(tf.sub(self.nondetail_G[-1],self.nondetail_normal)))
-                self.detail_L_loss = tf.reduce_mean(tf.abs(tf.sub(self.detail_G[-1],self.detail_normal)))
-                self.L_loss = tf.reduce_mean(tf.abs(tf.sub(self.G,self.normal_images)))
+                self.nondetail_L_loss = tf.reduce_mean(tf.abs(tf.subtract(self.nondetail_G[-1],self.nondetail_normal)))
+                self.detail_L_loss = tf.reduce_mean(tf.abs(tf.subtract(self.detail_G[-1],self.detail_normal)))
+                self.L_loss = tf.reduce_mean(tf.abs(tf.subtract(self.G,self.normal_images)))
 	else:
             if self.input_type == 'single':
                 self.L_loss = tf.reduce_mean(tf.square(self.G-self.normal_images))
@@ -187,8 +200,10 @@ class DCGAN(object):
             detail_g_optim = tf.train.AdamOptimizer(config.learning_rate,beta1=config.beta1) \
                           .minimize(self.detail_gen_loss, global_step=global_step4,var_list=self.detail_g_vars)
 
-
-	tf.initialize_all_variables().run()
+	try:
+	   tf.global_variables_initializer().run()
+	except:
+	   tf.initialize_all_variables().run()
 	
         start_time = time.time()
 
