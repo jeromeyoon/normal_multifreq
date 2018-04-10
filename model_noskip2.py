@@ -121,7 +121,7 @@ class DCGAN(object):
 	self.d_sum = tf.summary.merge([self.d_loss_sum,self.d_loss_fake_sum,self.d_loss_real_sum])
 
 
-	self.writer = tf.summary.FileWriter("./multi_freq2_logs", self.sess.graph)
+	self.writer = tf.summary.FileWriter("./logs_multifreq_noskip2", self.sess.graph)
         try:
 	    tf.global_variables_initializer().run()
 	except:

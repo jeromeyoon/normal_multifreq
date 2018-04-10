@@ -155,7 +155,7 @@ class DCGAN(object):
 	self.d_sum = tf.summary.merge([self.d_loss_sum,self.nondetail_d_loss_sum,self.nondetail_d_loss_real_sum,self.nondetail_d_loss_fake_sum,self.detail_d_loss_sum,self.d_loss_real_sum,self.d_loss_fake_sum])
 
 
-	self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
+	self.writer = tf.summary.FileWriter("./logs_multifreq_noskip", self.sess.graph)
         try:
 	    tf.global_variables_initializer().run()
 	except:
@@ -237,35 +237,4 @@ class DCGAN(object):
             return False
 
 	
-    def load_and_enqueue_multi(self,coord,file_list,label_list,shuf,idx=0,num_thread=1):
-	count =0;
-	length = len(file_list)
-	rot=[0,90,180,270]
-	while not coord.should_stop():
-	    i = (count*num_thread + idx) % length;
-	    r = random.randint(0,3)
-            input_img = scipy.misc.imread(file_list[shuf[i]][0].encode("utf-8")).reshape([224,224,1]).astype(np.float32)
-	    gt_img = scipy.misc.imread(label_list[shuf[i]][0].encode("utf-8")).reshape([224,224,3]).astype(np.float32)
-            low_input = ndimage.gaussian_filter(input_img,sigma=(1,1,0),order=0)	    
-            low_gt = ndimage.gaussian_filter(gt_img,sigma=(1,1,0),order=0)	    
-	    input_img = input_img/127.5 -1.
-	    gt_img = gt_img/127.5 -1.
-	    low_input = low_input/127.5 -1.
-	    low_gt = low_gt/127.5 -1.
-	    high_input = input_img - low_input
-	    high_gt = gt_img - low_gt
-	
-	    rand_x = np.random.randint(64,224-64)
-	    rand_y = np.random.randint(64,224-64)
-	    ipt =  input_img[rand_y:rand_y+64,rand_x:rand_x+64,:]
-	    label = gt_img[rand_y:rand_y+64,rand_x:rand_x+64,:]
-
-	    low_ipt =  low_input[rand_y:rand_y+64,rand_x:rand_x+64,:]
-	    low_label = low_gt[rand_y:rand_y+64,rand_x:rand_x+64,:]
-
-	    high_ipt =  high_input[rand_y:rand_y+64,rand_x:rand_x+64,:]
-	    high_label = high_gt[rand_y:rand_y+64,rand_x:rand_x+64,:]
-            pdb.set_trace()
-	    self.sess.run(self.enqueue_op,feed_dict={self.nondetail_image_single:low_ipt,self.detail_image_single:high_ipt,self.nondetailnormal_image_single:low_label,self.detailnormal_image_single:high_label,self.normal_image_single:label})
-	    count +=1
 		

@@ -8,6 +8,7 @@ import scipy.misc
 import numpy as np
 import pdb
 import random
+from scipy import ndimage
 pp = pprint.PrettyPrinter()
 
 get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
@@ -18,15 +19,21 @@ def create_mask(images):
     return mask
 
 
-def get_image(image_path,gt_path,image_size,randx,randy,is_crop=True):
-    gt =transform(imread(gt_path),image_size,randx,randy,is_crop)
-    #gt = surface_normal(transform(imread(gt_path),image_size,randx,randy,is_crop))
-    input_ = transform(imread(image_path),image_size,randx,randy,is_crop)
-    #input_ = np.clip(input_**random.uniform(0.5,1.0),0.0,1.0)
-    #input_ = transform2(input_,image_size,randx,randy,is_crop)
-    #mask = create_mask(input_)
+def get_image(image_path,gt_path,image_size,npx=64,is_crop=True):
+    gt =imread(gt_path)
+    gt = gt/127.5 -1.0
+    low_gt = ndimage.gaussian_filter(gt,sigma=(1,1,0),order=0)	    
+    high_gt = gt - low_gt
+    input_ = imread(image_path)
+    input_ = input_/127.5 -1.0
+    low_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	    
+    high_input_ = input_ - low_input_
 
-    return np.concatenate((input_,gt),axis=2)
+    randx = np.random.randint(gt.shape[1]-npx)
+    randy = np.random.randint(gt.shape[0]-npx)
+    output = np.concatenate((input_,high_input_,low_input_,gt,high_gt,low_gt),axis=2)
+    output = output[randy:randy+npx,randx:randx+npx,:]
+    return output
 
 def surface_normal(surface):
     surface = surface/np.expand_dims(np.sqrt(np.sum(np.power(surface,2),axis=2)),-1)
@@ -63,16 +70,11 @@ def imread_gray(path):
 
 
 def imread(path):
+    path = path[0].encode("utf-8")
     tmp = scipy.misc.imread(path).astype(np.float)
     if tmp.shape[-1] != 3:
-       """
-       mean = 1.0
-       std = 0.05
-       tmp = tmp * np.random.normal(mean,std)
-       np.clip(tmp,0.0,255.0,out=tmp)
-       """
        return np.reshape(tmp, (tmp.shape[0],tmp.shape[1],1))
-    return tmp
+    return np.reshape(tmp,(tmp.shape[0],tmp.shape[1],3))
        
 """
 def imread(path,gray):
@@ -156,15 +158,7 @@ def center_crop(x, crop_h, crop_w=None, resize_w=64):
     i = int(round((w - crop_w)/2.))
     return scipy.misc.imresize(x[j:j+crop_h, i:i+crop_w],
                                [resize_w, resize_w])
-"""
-def transform(image, npx=64, is_crop=True):
-    # npx : # of pixels width/height of image
-    if is_crop:
-        cropped_image = center_crop(image, npx)
-    else:
-        cropped_image = image
-    return np.array(cropped_image)/127.5 - 1.
-"""
+
 def transform_normal(image, npx, randx,randy,is_crop=True):
     # npx : # of pixels width/height of image
     if is_crop:
@@ -185,12 +179,16 @@ def transform_normal(image, npx, randx,randy,is_crop=True):
 
 def transform(image, npx, randx,randy,is_crop=True):
     # npx : # of pixels width/height of image
+    image = image/127.5 - 1.0
+    low_image = ndimage.gaussian_filter(image,sigma=(1,1,0),order=0)	    
     if is_crop:
         cropped_image = random_crop(image, npx,randx,randy)
+	low_cropped_image = random_crop(low_image,npx,rands,randy)
+	high_cropped_image = cropped_image - low_cropped_image
         #cropped_image = center_crop(image, npx)
     else:
         cropped_image = image
-    return np.array(cropped_image)/127.5 - 1.
+    return cropped_image,high_cropped_image,low_cropped_image
 
 def transform2(image, npx, randx,randy,is_crop=True):
     # npx : # of pixels width/height of image
