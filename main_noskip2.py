@@ -119,16 +119,13 @@ def main(_):
 		    #savename = os.path.join(savepath,'%s/%s/%s/single_normal.bmp' % (FLAGS.dataset,model,listdir[idx]))
 		    scipy.misc.imsave(savename, output)
 
-	    elif VAL_OPTION ==2: # light source fixed
+            elif VAL_OPTION ==2: # light source fixed
                 list_val = [11,16,21,22,33,36,38,53,59,92]
-		save_files = glob.glob(os.path.join(FLAGS.checkpoint_dir,FLAGS.dataset,'DCGAN.model*'))
-		save_files  = natsorted(save_files)
-		savepath ='./RMSS_ang_scale_loss_result'
-		for model_idx in range(0,len(save_files),2):
-		    model = save_files[model_idx]
-		    model = model.split('/')
-		    model = model[-1]
-		    dcgan.load(FLAGS.checkpoint_dir,model)
+		#save_files = glob.glob(os.path.join(FLAGS.checkpoint_dir,FLAGS.dataset,'DCGAN.model*'))
+		#save_files  = natsorted(save_files)
+		savepath ='./skip/L1_ang'
+		load = dcgan.load(FLAGS.checkpoint_dir)
+                if load:
             	    for idx in range(len(list_val)):
 			if not os.path.exists(os.path.join(savepath,'%03d' %list_val[idx])):
 		            os.makedirs(os.path.join(savepath,'%03d' %list_val[idx]))
@@ -136,17 +133,18 @@ def main(_):
 			    print("Selected material %03d/%d" % (list_val[idx],idx2))
 			    img = '/research2/IR_normal_small/save%03d/%d' % (list_val[idx],idx2)
 			    input_ = scipy.misc.imread(img+'/3.bmp').astype(float)
-			    gt_ = scipy.misc.imread('/research2/IR_normal_small/save016/1/12_Normal.bmp').astype(float)
-			    input_ = scipy.misc.imresize(input_,[300,400])
+			    #gt_ = scipy.misc.imread('/research2/IR_normal_small/save016/1/12_Normal.bmp').astype(float)
+			    input_ = scipy.misc.imresize(input_,[600,800])
+			    input_ = np.reshape(input_,(600,800,1))
 
-			    input_  = (input_/127.5)-1. # normalize -1 ~1
-			    gt_ = scipy.misc.imresize(gt_,[600,800])
-			    gt_ = np.reshape(gt_,(1,600,800,3)) 
-			    gt_ = np.array(gt_).astype(np.float32)
-			    input_ = np.reshape(input_,(1,600,800,1)) 
-			    input_ = np.array(input_).astype(np.float32)
+                            nondetail_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	   
+			    input_ = input_/127.5 -1.0 
+			    nondetail_input_  = nondetail_input_/127.5 -1.0 # normalize -1 ~1
+			    detail_input_ = input_ - nondetail_input_
+			    nondetail_input_ = np.reshape(nondetail_input_,(1,600,800,1))
+			    detail_input_ = np.reshape(detail_input_,(1,600,800,1))
 			    start_time = time.time() 
-			    sample = sess.run(dcgan.sampler, feed_dict={dcgan.ir_images: input_})
+	                    sample = sess.run([dcgan.G], feed_dict={dcgan.nondetail_images: nondetail_input_,dcgan.detail_images:detail_input_})
 			    print('time: %.8f' %(time.time()-start_time))     
 			    # normalization #
 			    sample = np.squeeze(sample).astype(np.float32)
@@ -159,31 +157,25 @@ def main(_):
 			    sample = (output+1.)/2.
 			    if not os.path.exists(os.path.join(savepath,'%03d/%d' %(list_val[idx],idx2))):
 			        os.makedirs(os.path.join(savepath,'%03d/%d' %(list_val[idx],idx2)))
-			    savename = os.path.join(savepath, '%03d/%d/single_normal_%s.bmp' % (list_val[idx],idx2,model))
+			    savename = os.path.join(savepath, '%03d/%d/single_normal.bmp' % (list_val[idx],idx2))
 			    scipy.misc.imsave(savename, sample)
-
+	        else:
+	            print("Failed to load network")
 	    elif VAL_OPTION ==3: # depends on light sources 
                 list_val = [11,16,21,22,33,36,38,53,59,92]
 		mean_nir = -0.3313 #-1~1
-		save_files = glob.glob(os.path.join(FLAGS.checkpoint_dir,FLAGS.dataset,'DCGAN.model*'))
-		save_files  = natsorted(save_files)
-		savepath ='./low_result'
+		savepath ='./angle_light_result'
 		if not os.path.exists(os.path.join(savepath)):
 		    os.makedirs(os.path.join(savepath))
-		selec_model=[0,2,4,6,8,10,12,14,16,18]
-		#[selec_model.append(ii) for ii in range(0,len(save_files),2)]
-                for m in range(len(selec_model)):
-		    model = save_files[selec_model[m]]
-		    model = model.split('/')
-		    model = model[-1]
-		    dcgan.load(FLAGS.checkpoint_dir,model)
+		load = dcgan.load(FLAGS.checkpoint_dir)
+                if load:
+	            print(" Load Success")
 	            for idx in range(len(list_val)):
 		        if not os.path.exists(os.path.join(savepath,'%03d' %list_val[idx])):
 		            os.makedirs(os.path.join(savepath,'%03d' %list_val[idx]))
 		        for idx2 in range(1,10): #tilt angles 1~9 
 		            for idx3 in range(1,13): # light source 
 			        print("Selected material %03d/%d" % (list_val[idx],idx2))
-			        #img = '/research2/ECCV_dataset_resized/save%03d/%d' % (list_val[idx],idx2)
 			        img = '/research2/IR_normal_small/save%03d/%d' % (list_val[idx],idx2)
 			        input_ = scipy.misc.imread(img+'/%d.bmp' %idx3).astype(np.float32) #input NIR image
 			        input_ = scipy.misc.imresize(input_,[600,800],'nearest')
@@ -195,11 +187,8 @@ def main(_):
 			        detail_input_ = input_ - nondetail_input_
 			        nondetail_input_ = np.reshape(nondetail_input_,(1,600,800,1))
 			        detail_input_ = np.reshape(detail_input_,(1,600,800,1))
-			        #detail_input_  = detail_input_/127.5 -1.0 # normalize -1 ~1
 			        start_time = time.time() 
-	                        sample,_ = sess.run([dcgan.low_G,dcgan.high_G], feed_dict={dcgan.nondetail_images: nondetail_input_,dcgan.detail_images:detail_input_})
-			        #sample = sess.run(dcgan.G, feed_dict={dcgan.nondetail_images: nondetail_input_,dcgan.detail_images:detail_input_})
-				#sample = np.squeeze(sample).astype(np.float32)
+	                        sample = sess.run([dcgan.G], feed_dict={dcgan.nondetail_images: nondetail_input_,dcgan.detail_images:detail_input_})
 				sample = np.squeeze(sample[-1]).astype(np.float32)
 				
 			        print('time: %.8f' %(time.time()-start_time))     
@@ -208,10 +197,13 @@ def main(_):
 			        output = np.expand_dims(output,axis=-1)
 			        output = sample/output
 			        output = (output+1.)/2.
-			        if not os.path.exists(os.path.join(savepath,'%s/%s/%03d/%d' %(FLAGS.dataset,model,list_val[idx],idx2))):
-			            os.makedirs(os.path.join(savepath,'%s/%s/%03d/%d' %(FLAGS.dataset,model,list_val[idx],idx2)))
-			        savename = os.path.join(savepath,'%s/%s/%03d/%d/single_normal_%03d.bmp' % (FLAGS.dataset,model,list_val[idx],idx2,idx3))
+			        if not os.path.exists(os.path.join(savepath,'%s/%03d/%d' %(FLAGS.dataset,list_val[idx],idx2))):
+			            os.makedirs(os.path.join(savepath,'%s/%03d/%d' %(FLAGS.dataset,list_val[idx],idx2)))
+			        savename = os.path.join(savepath,'%s/%03d/%d/single_normal_%03d.bmp' % (FLAGS.dataset,list_val[idx],idx2,idx3))
 				scipy.misc.imsave(savename, output)
+
+                else:
+                    print("Failed to laod network")
 
 
 if __name__ == '__main__':

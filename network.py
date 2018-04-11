@@ -8,7 +8,7 @@ class networks(object):
  
 
 
-    def multi_freq_generator(self,low_nir,high_nir):
+    def multi_freq_generator_skip(self,low_nir,high_nir):
 
         low_layers=[]
 	high_layers=[]
@@ -36,6 +36,44 @@ class networks(object):
 	    with tf.variable_scope('high_g%d' %(len(high_layers)+1)):
 		low = low_layers[len(high_layers)-1]
 	    	net = high_layers[-1]+low
+		net = lrelu(batchnorm(conv2d(net,self.gf_dim*maps)))
+                high_layers.append(net)
+
+	with tf.variable_scope('high_g%d' %(len(high_layers)+1)):
+	    net = tf.tanh(conv2d(high_layers[-1],3))
+	    high_layers.append(net)
+	
+	return low_layers,high_layers
+
+
+
+    def multi_freq_generator_noskip(self,low_nir,high_nir):
+
+        low_layers=[]
+	high_layers=[]
+        layers_spec=[4,2]
+	
+	with tf.variable_scope('low_g%d' %(len(low_layers)+1)):
+	    net =lrelu(conv2d(low_nir,self.gf_dim*2))
+	    low_layers.append(net)
+
+        for maps in layers_spec:
+	    with tf.variable_scope('low_g%d' %(len(low_layers)+1)):
+	        net =lrelu(batchnorm(conv2d(low_layers[-1],self.gf_dim*maps)))
+	        low_layers.append(net)
+    
+        with tf.variable_scope('low_g%d' %(len(low_layers)+1)):
+	    net  =conv2d(net,3)
+	    net = tf.tanh(net)
+	    low_layers.append(net)
+
+	with tf.variable_scope('high_g%d' %(len(high_layers)+1)):
+	    net =lrelu(conv2d(high_nir,self.gf_dim*2))
+	    high_layers.append(net)
+
+        for maps in layers_spec:
+	    with tf.variable_scope('high_g%d' %(len(high_layers)+1)):
+	    	net = high_layers[-1]
 		net = lrelu(batchnorm(conv2d(net,self.gf_dim*maps)))
                 high_layers.append(net)
 
