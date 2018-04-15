@@ -21,12 +21,14 @@ def create_mask(images):
 
 def get_image(image_path,gt_path,image_size,npx=64,is_crop=True):
     gt =imread(gt_path)
-    gt = gt/127.5 -1.0
     low_gt = ndimage.gaussian_filter(gt,sigma=(1,1,0),order=0)	    
+    gt = gt/127.5 -1.0
+    low_gt = low_gt/127.5-1.0
     high_gt = gt - low_gt
     input_ = imread(image_path)
-    input_ = input_/127.5 -1.0
     low_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	    
+    input_ = input_/127.5 -1.0
+    low_input_ = low_input_/127.5-1.0
     high_input_ = input_ - low_input_
 
     randx = np.random.randint(gt.shape[1]-npx)

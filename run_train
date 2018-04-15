@@ -1,4 +1,7 @@
 #!/bin/sh
+
+echo -n "select network(main_skip,main_skip2,main_skip3main_noskip,main_noskip2):"
+read network
 echo -n "insert GPU number:"
 read gpu
 echo -n "insert GPU factor:"
@@ -11,6 +14,6 @@ then
     echo "Please insert GPU number and GPU factor \n"
 exit
 else
-CUDA_VISIBLE_DEVICES=$gpu python main.py --is_train true --is_crop true --gpu $gpu_factor --dataset $datasetname 
+CUDA_VISIBLE_DEVICES=$gpu python $network'.py' --is_train true --is_crop true --gpu $gpu_factor --dataset $datasetname 
 fi
 

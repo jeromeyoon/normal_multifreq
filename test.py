@@ -1,4 +1,4 @@
-import os,time
+import os,time,pdb
 from glob import glob
 import tensorflow as tf
 from ops import *
@@ -29,17 +29,30 @@ class EVAL(object):
                                     name='detail_images')
 
 	net  = networks(64,64)
-        self.low_G,self.high_G = net.generator(self.nondetail_images,self.detail_images)
-        self.G = self.high_G[-1] + self.low_G[-1]	
+       	self.nondetail_G,self.detail_G = net.multi_freq_generator_skip(self.nondetail_images,self.detail_images) 
+	self.G = self.nondetail_G[-1] + self.detail_G[-1]
         self.saver = tf.train.Saver()
 
 
-    def load(self, checkpoint_dir,model):
+    def load(self, checkpoint_dir):
         print(" [*] Reading checkpoints...")
-
-        #model_dir = "%s_%s" % (self.dataset_name, 32)
+	import re
         model_dir = "%s" % (self.dataset_name)
         checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
+	ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+	
+	if ckpt and ckpt.model_checkpoint_path:
+            #ckpt_name = os.path.basename(ckpt.name_checkpoint_path)
+            self.saver.restore(self.sess,ckpt.all_model_checkpoint_paths[-1])
+	    pdb.set_trace()
+	    #counter = int(next(re.finditer("(\d+)(?!.*\d)",ckpt_name)).group(0))
+            print("[*] Success to read ")
+            #print("[*] Success to read {}".format(ckpt_name))
+            return True
+        else:
+            print(" [*] Failed to find a checkpoint")
+            return False, 0
+        '''
 	#model_path = os.path.join(checkpoint_dir,model)
 	if os.path.isfile(os.path.join(checkpoint_dir,model)):
 	    print(' Success load network ')
@@ -48,3 +61,4 @@ class EVAL(object):
 	else:
 	    print('Fail to load network')
 	    return False
+        '''

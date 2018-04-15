@@ -35,7 +35,8 @@ class networks(object):
         for maps in layers_spec:
 	    with tf.variable_scope('high_g%d' %(len(high_layers)+1)):
 		low = low_layers[len(high_layers)-1]
-	    	net = high_layers[-1]+low
+	        net = tf.concat([high_layers[-1],low],3)
+	    	#net = high_layers[-1]+low
 		net = lrelu(batchnorm(conv2d(net,self.gf_dim*maps)))
                 high_layers.append(net)
 

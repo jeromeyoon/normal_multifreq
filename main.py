@@ -2,7 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import random,time,json,pdb,scipy.misc,glob
-from model_queue import DCGAN
+from model_skip import DCGAN
 from test import EVAL
 from utils import pp, save_images, to_json, make_gif, merge, imread, get_image
 from numpy import inf
@@ -11,7 +11,7 @@ import matplotlib.image as mpimg
 from scipy import ndimage
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 20, "Epoch to train [25]")
-flags.DEFINE_float("learning_rate", 0.00002, "Learning rate of for adam [0.0002]")
+flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_integer("batch_size", 32, "The size of batch images [64]")
@@ -40,9 +40,6 @@ def main(_):
     if not os.path.exists(FLAGS.sample_dir):
         os.makedirs(FLAGS.sample_dir)
     
-    if not os.path.exists(os.path.join('./logs',time.strftime('%d%m'))):
-    	os.makedirs(os.path.join('./logs',time.strftime('%d%m')))
-
     gpu_config = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu)
     #with tf.Session() as sess:
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_config)) as sess:

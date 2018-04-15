@@ -11,7 +11,7 @@ import matplotlib.image as mpimg
 from scipy import ndimage
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 20, "Epoch to train [25]")
-flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
+flags.DEFINE_float("learning_rate", 0.00002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_integer("batch_size", 32, "The size of batch images [64]")
@@ -122,7 +122,7 @@ def main(_):
                 list_val = [11,16,21,22,33,36,38,53,59,92]
 		#save_files = glob.glob(os.path.join(FLAGS.checkpoint_dir,FLAGS.dataset,'DCGAN.model*'))
 		#save_files  = natsorted(save_files)
-		savepath ='./skip/L1_ang'
+		savepath ='./skip_result/Light3/L1_ang'
 		load = dcgan.load(FLAGS.checkpoint_dir)
                 if load:
             	    for idx in range(len(list_val)):
