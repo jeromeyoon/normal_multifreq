@@ -2,7 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import random,time,json,pdb,scipy.misc,glob
-from model_skip import DCGAN
+from model_queue_skip import DCGAN
 from test import EVAL
 from utils import pp, save_images, to_json, make_gif, merge, imread, get_image
 from numpy import inf
@@ -122,7 +122,7 @@ def main(_):
                 list_val = [11,16,21,22,33,36,38,53,59,92]
 		#save_files = glob.glob(os.path.join(FLAGS.checkpoint_dir,FLAGS.dataset,'DCGAN.model*'))
 		#save_files  = natsorted(save_files)
-		savepath ='./skip_result/Light3/L1_ang'
+		savepath ='./result/skip_result/Light3/L2ang'
 		load = dcgan.load(FLAGS.checkpoint_dir)
                 if load:
             	    for idx in range(len(list_val)):
