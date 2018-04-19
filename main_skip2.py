@@ -2,7 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import random,time,json,pdb,scipy.misc,glob
-from model_skip2 import DCGAN
+from model_queue_skip2 import DCGAN
 from test import EVAL
 from utils import pp, save_images, to_json, make_gif, merge, imread, get_image
 from numpy import inf
@@ -121,7 +121,7 @@ def main(_):
                 list_val = [11,16,21,22,33,36,38,53,59,92]
 		#save_files = glob.glob(os.path.join(FLAGS.checkpoint_dir,FLAGS.dataset,'DCGAN.model*'))
 		#save_files  = natsorted(save_files)
-		savepath ='./skip/L1_ang'
+		savepath ='./result/skip2_result/Light3/L2ang'
 		load = dcgan.load(FLAGS.checkpoint_dir)
                 if load:
             	    for idx in range(len(list_val)):
@@ -135,7 +135,8 @@ def main(_):
 			    input_ = scipy.misc.imresize(input_,[600,800])
 			    input_ = np.reshape(input_,(600,800,1))
 
-                            nondetail_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	   
+                            #nondetail_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	   
+            		    nondetail_input = ndimage.median_filter(input_,size=(3,3,3))	    
 			    input_ = input_/127.5 -1.0 
 			    nondetail_input_  = nondetail_input_/127.5 -1.0 # normalize -1 ~1
 			    detail_input_ = input_ - nondetail_input_
@@ -162,10 +163,10 @@ def main(_):
 	    elif VAL_OPTION ==3: # depends on light sources 
                 list_val = [11,16,21,22,33,36,38,53,59,92]
 		mean_nir = -0.3313 #-1~1
-		savepath ='./angle_light_result'
 		if not os.path.exists(os.path.join(savepath)):
 		    os.makedirs(os.path.join(savepath))
-		load = dcgan.load(FLAGS.checkpoint_dir)
+		load,counter = dcgan.load(FLAGS.checkpoint_dir)
+		savepath ='./result/skip2_result/allviews/L2ang/%06d' %iteration
                 if load:
 	            print(" Load Success")
 	            for idx in range(len(list_val)):
@@ -179,7 +180,8 @@ def main(_):
 			        input_ = scipy.misc.imresize(input_,[600,800],'nearest')
 			        input_ = np.reshape(input_,(600,800,1))
 
-				nondetail_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	   
+				#nondetail_input_ = ndimage.gaussian_filter(input_,sigma=(1,1,0),order=0)	   
+            		        nondetail_input = ndimage.median_filter(input_,size=(3,3,3))	    
 				input_ = input_/127.5 -1.0 
 			        nondetail_input_  = nondetail_input_/127.5 -1.0 # normalize -1 ~1
 			        detail_input_ = input_ - nondetail_input_

@@ -188,7 +188,7 @@ class DCGAN(object):
 
 		     print("Epoch: [%2d] [%4d/%4d] time: %4.4f g_loss: %.6f d_loss:%.6f ,L_loss: %.6f ang_loss:%.6f" \
 		     % (epoch, idx, batch_idxs,time.time() - start_time,g_err,d_err,L_err,ang_err))
-                     if np.mod(global_step1.eval(),4000) ==0 and global_step1 != 0:
+                     if np.mod(global_step1.eval(),2000) ==0 and global_step1 != 0:
 	                 self.save(config.checkpoint_dir,global_step1)
 	else:
             print('Only multi-thread support \n') 

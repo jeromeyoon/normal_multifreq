@@ -116,8 +116,8 @@ class DCGAN(object):
         self.detail_g_loss = binary_cross_entropy_with_logits(tf.ones_like(self.detail_D_[-1]), self.detail_D_[-1])
 	self.ang_loss = ang_loss.ang_error(self.G,self.normal_images)
  
-        self.nondetail_gen_loss = self.nondetail_g_loss + (self.nondetail_L_loss+self.L_loss+self.ang_loss)
-        self.detail_gen_loss = self.detail_g_loss + (self.detail_L_loss)+(self.L_loss+self.ang_loss)
+        self.nondetail_gen_loss = self.nondetail_g_loss + (self.nondetail_L_loss+self.L_loss+self.ang_loss)*100
+        self.detail_gen_loss = self.detail_g_loss + (self.detail_L_loss)*1000+(self.L_loss+self.ang_loss)*1000
 	
 	self.saver = tf.train.Saver(max_to_keep=20)
 	t_vars = tf.trainable_variables()
@@ -154,7 +154,8 @@ class DCGAN(object):
 	
         start_time = time.time()
 	
-        if self.load(self.checkpoint_dir):
+        load, counter =  self.load(self.checkpoint_dir)
+        if load:
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed...")
@@ -173,7 +174,7 @@ class DCGAN(object):
 	if self.use_queue:
 	    # creat thread
 	    coord = tf.train.Coordinator()
-            num_thread =8
+            num_thread =12
             for i in range(num_thread):
  	        t = threading.Thread(target=self.load_and_enqueue,args=(coord,train_input,train_gt,shuf,i,num_thread))
 	 	t.start()
@@ -193,8 +194,9 @@ class DCGAN(object):
 		     print("Epoch: [%2d] [%4d/%4d] time: %4.4f nondetail_g_loss: %.6f nondetail_L: %.6f nondetail_d_loss:%.4f detail_g_loss:%.6f detail_d_loss:%.6f detail_L_loss: %.6f, L_loss: %.6f ang_loss:%.6f" \
 		     % (epoch, idx, batch_idxs,time.time() - start_time,nondetail_g_err,nondetail_L_err,nondetail_d_err,detail_g_err,detail_d_err,detail_L_err,L_err,ang_err))
 
-                     if np.mod(global_step1.eval(),4000) ==0 and global_step1 != 0:
-	                 self.save(config.checkpoint_dir,global_step1)
+                     if np.mod(global_step1.eval(),2000) ==0 and global_step1 != 0:
+	                 self.save(config.checkpoint_dir,counter)
+		     counter +=1
 	else:
             print('Only multi-thread support \n') 
     def save(self, checkpoint_dir, step):
@@ -219,11 +221,13 @@ class DCGAN(object):
 	if ckpt and ckpt.model_checkpoint_path:
             #ckpt_name = os.path.basename(ckpt.name_checkpoint_path)
             self.saver.restore(self.sess,ckpt.all_model_checkpoint_paths[-1])
+	    counter = ckpt.all_model_checkpoint_paths[-1]
+            counter = counter[37:].encode('utf-8')
 	    pdb.set_trace()
 	    #counter = int(next(re.finditer("(\d+)(?!.*\d)",ckpt_name)).group(0))
             print("[*] Success to read ")
             #print("[*] Success to read {}".format(ckpt_name))
-            return True
+            return True,int(counter)
         else:
             print(" [*] Failed to find a checkpoint")
             return False, 0
